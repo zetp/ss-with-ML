@@ -5,8 +5,8 @@
 library(dplyr)
 library(tidyr)
 library(mlr)
-library(Biostrings)
 library(Peptides)
+#library(Biostrings)
 
 ## secondary structure database can be downloaded from PDB under this address:
 ## https://cdn.rcsb.org/etl/kabschSander/ss.txt.gz
@@ -19,7 +19,7 @@ path <- "~/Path/to/this_directory/"
 setwd(path)
 
 # load the database
-ssdata <- readAAStringSet("ss.txt", format="fasta") 
+ssdata <- Biostrings::readAAStringSet("ss.txt", format="fasta") 
 
 # quick look at data
 ssdata %>% head()
@@ -87,16 +87,17 @@ split_seq <- function(df, x) {
 }
 
 #' add_context this function adds columns with up to 5 aa's before and after given amino acid (aa)
+#' @param n - size of margin (number of residues on each site)
 #' @param df - data frame
 #' @return data frame
-add_context <- function(df){
+add_context <- function(df, n){
   # add lagging
-  for (i in seq(1,5)){
+  for (i in seq(1,n)){
     name_X <- paste0("m", i)
     df[[name_X]] <- with(df, as.character(lag(seq, n=i)))
   }
   # add leading
-  for (i in seq(1,5)){
+  for (i in seq(1,n)){
     name_X <- paste0("p", i)
     df[[name_X]] <- with(df, as.character(lead(seq, n=i)))
   }
@@ -113,7 +114,7 @@ add_context <- function(df){
 df_list <- list()
 for (i in seq(1,nrow(df_train))){
   # split sequence, then add neighbouring amino acids
-  temp_ <- split_seq(x=i, df=df) %>% add_context()
+  temp_ <- split_seq(x=i, df=df) %>% add_context(., 3)
   # addto list of data frames
   df_list[[length(df_list)+1]] <- temp_
 }
@@ -213,7 +214,7 @@ model_Forest <- readRDS("model_Forest.rds")
 test_seq <- df_test[1,] # take first seuqnce
 # split sequence, then add neighbouring amino acids
 test_seq$name <- NULL
-test_seq <- split_seq(x=1, df=test_seq) %>% add_context()
+test_seq <- split_seq(x=1, df=test_seq) %>% add_context(., 3)
 # change columns types to factors
 test_seq <- test_seq %>% mutate_all(.funs = function(x){as.factor(x)})
 
@@ -227,7 +228,7 @@ for (i in common) {
 Prediction <- predict(model_Forest, newdata = test_seq)
 
 # return result
-Sset <- AAStringSet(c(paste(test_seq$seq, collapse = ''),
+Sset <- Biostrings::AAStringSet(c(paste(test_seq$seq, collapse = ''),
                       paste(Prediction$data$response, collapse = '')))
 names(Sset) = c("sequence", "prediced ss")
 print(Sset)
