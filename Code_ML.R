@@ -2,10 +2,12 @@
 #' predict secondary strucutre of protiens using given
 #' amino acid sequence enviroment and machine learning
 
-library(dplyr)
-library(tidyr)
+#  set path
+path <- "~/Path/to/this_directory/"
+setwd(path)
+
+source("Functions.R")
 library(mlr)
-library(Peptides)
 #library(Biostrings)
 
 ## secondary structure database can be downloaded from PDB under this address:
@@ -14,17 +16,12 @@ library(Peptides)
 ## with sequences and secondary structure information generated using DSSP"
 ## more about DSSP: https://en.wikipedia.org/wiki/DSSP_(hydrogen_bond_estimation_algorithm)
 
-# first set path
-path <- "~/Path/to/this_directory/"
-setwd(path)
-
-# load the database
-ssdata <- Biostrings::readAAStringSet("ss.txt", format="fasta") 
+# load the database from the web
+ssdata <- Biostrings::readAAStringSet("https://cdn.rcsb.org/etl/kabschSander/ss.txt.gz", format="fasta")
 
 # quick look at data
 ssdata %>% head()
 length(ssdata)
-str(ssdata)
 
 # make data frame
 names <- names(ssdata)
@@ -32,10 +29,7 @@ sequences <- paste(ssdata)
 df <- data.frame(names, sequences)
 df$sequences <- as.character(df$sequences)
 
-# check data frame
-summarizeColumns(df)
-
-# extract info about sequence vs secondary structure (ss)
+# extract info about sequence (seq) vs secondary structure (ss)
 df <- df %>% separate(names, into = c("names","type"), sep = ":se")
 
 # make seq and ss into columns of df
@@ -60,53 +54,17 @@ df$ss <-  gsub(' ', '-', df$ss)
 ###
 # N.B. for reproducible results set seed
 
-fraction_ <- as.integer(nrow(df)*0.1) # we will take just 10% of data for faster computation
-df_train <- sample_n(df, fraction_)
+# fraction_ <- as.integer(nrow(df)*0.8) # if we would like to take 80% of data
+# df_train <- sample_n(df, 10000)
+
+df_train <- sample_n(df, 1000) # we will take just 1000 sequences for faster computation
 
 # now substract sample from full data
 df_no_s <- anti_join(df, df_train)
 
 # then draw another sample and you know that train and test data will not overlap
-df_test <- sample_n(df_no_s, 100)
+df_test <- sample_n(df_no_s, 10)
 
-
-### Functions definitions
-
-#' split_seq this function will take data single row of data frame and split "sequences" column and "ss" columns
-#' info single characters and return new data frame with seq and ss columns preserving names information
-#' @param df - which row should the function take
-#' @param x - from which data frame
-split_seq <- function(df, x) {
-  a <- df[x,] # take n-th row of data frame
-  y <- (strsplit(a$sequences, "")) # split seq
-  z <- (strsplit(a$ss, "")) # split ss
-  new_df <- data.frame(name = a$names,
-                       seq = y[[1]],
-                       ss = z[[1]])
-  return(new_df)
-}
-
-#' add_context this function adds columns with up to 5 aa's before and after given amino acid (aa)
-#' @param n - size of margin (number of residues on each site)
-#' @param df - data frame
-#' @return data frame
-add_context <- function(df, n){
-  # add lagging
-  for (i in seq(1,n)){
-    name_X <- paste0("m", i)
-    df[[name_X]] <- with(df, as.character(lag(seq, n=i)))
-  }
-  # add leading
-  for (i in seq(1,n)){
-    name_X <- paste0("p", i)
-    df[[name_X]] <- with(df, as.character(lead(seq, n=i)))
-  }
-  #dealing with NAs (N.B. as.character is required for this)
-  df[is.na(df)]<-"-" 
-  return(df)
-} # function
-
-### /Functions definitions
 
 ###
 #  Data processing - this will take some CPU time
@@ -129,17 +87,17 @@ train$name <- NULL
 # N.B. you might not want to deduplicate data here if you would like to retain data proportions.
 train <- distinct(train)
 
-summarizeColumns(train)
-
 # change columns types to factors
-train <- train %>% mutate_all(.funs = function(x){if(is.character(x)) as.factor(x)})
+#train <- train %>% mutate_all(.funs = function(x){if(is.character(x)) as.factor(x)})
 
+### add amino acids properties
+train <- add_aa_properties(train)
 
-### N.B. we could add another properties here
-# for example:
-amino_acid <- "a"
-as.data.frame(aaComp(amino_acid))
-
+# save proceesed data here
+# Save an object to a file
+saveRDS(train, file = "data_train_proc.rds", compress = T)
+# Restore the object
+train <- readRDS(file = "data_train_proc.rds")
 
 ###
 #  Machine learning
@@ -214,7 +172,7 @@ model_Forest <- readRDS("model_Forest.rds")
 test_seq <- df_test[1,] # take first seuqnce
 # split sequence, then add neighbouring amino acids
 test_seq$name <- NULL
-test_seq <- split_seq(x=1, df=test_seq) %>% add_context(., 3)
+test_seq <- split_seq(x=1, df=test_seq) %>% add_context(., 3) %>% add_aa_properties()
 # change columns types to factors
 test_seq <- test_seq %>% mutate_all(.funs = function(x){as.factor(x)})
 
