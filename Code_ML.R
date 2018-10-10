@@ -103,7 +103,8 @@ train <- readRDS(file = "data_train_proc.rds")
 #  Machine learning
 ###
 
-#N.B. cannot check correlations in data as all variables are factors
+#N.B. add  correlation check (dot plots, chi-square + strength of association)
+
 
 # make train task
 trainTask <- makeClassifTask(data = train, target = "ss")
