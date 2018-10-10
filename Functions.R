@@ -1,7 +1,7 @@
 library(dplyr)
 library(tidyr)
 library(Peptides)
-library(parallel)
+#library(parallel)
 library(pbmcapply)
 
 # detect cores
@@ -68,19 +68,18 @@ dat_f <- dat_f[-1,] # dele first row of new data frame
 
 fac <- df[,col] # sequence of column
 
-##old
-# for (i in seq(1,length(fac))){
-#   aa <- fac[i] # single aa
-#   b <- as.data.frame(aaComp(aa)) # get properties using Peptides library
-#   c <- b[,-2]
-#   dat_f <- rbind(dat_f, c)
-#   #cat("\r",paste("processing column:", name_c, round(i*100/length(fac)), "% complete")) # progress
-# }
+#old
+ #  for (i in seq(1,length(fac))){
+ #    aa <- fac[i] # single aa
+ #    b <- as.data.frame(aaComp(aa)) # get properties using Peptides library
+ #    c <- b[,-2]
+ #    dat_f <- rbind(dat_f, c)
+ #   #cat("\r",paste("processing column:", name_c, round(i*100/length(fac)), "% complete")) # progress
+ # }
 
 # new with lapply
-dat_f <- lapply(seq(1,length(fac)), function(fac=fac){
-  aa <- fac[i] # single aa
-  b <- as.data.frame(aaComp(aa)) # get properties using Peptides library
+dat_f <- lapply(fac, function(x){
+  b <- as.data.frame(aaComp(x)) # get properties using Peptides library
   c <- b[,-2]
   return(c)
 })
@@ -106,12 +105,12 @@ add_aa_properties <- function(df){
   df_list <- list() # make list
   
   ##old code slow
-  # for (i in s){df_list[[length(df_list)+1]] <- for_column(df, i)}
+  for (i in s){df_list[[length(df_list)+1]] <- for_column(i, df)}
   ## better - lapply
   #df_list <- lapply(s, for_column, df)
   
   # parallel lapply with progress bar
-  df_list <- pbmclapply(s, for_column, df=df, mc.cores = no_cores)
+  #df_list <- pbmclapply(s, for_column, df=df, mc.cores = no_cores)
   
   df_result <-  bind_cols(df_list) # combine all columns together
   # change 0, 1 into factors

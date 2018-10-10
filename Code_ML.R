@@ -172,8 +172,9 @@ model_Forest <- readRDS("model_Forest.rds")
 ###
 test_seq <- df_test[1,] # take first seuqnce
 # split sequence, then add neighbouring amino acids
+test_seq <- split_seq(x=1, df=test_seq)
 test_seq$name <- NULL
-test_seq <- split_seq(x=1, df=test_seq) %>% add_context(., 3) %>% add_aa_properties()
+test_seq <- add_context(test_seq, 3) %>% add_aa_properties()
 # change columns types to factors
 test_seq <- test_seq %>% mutate_all(.funs = function(x){as.factor(x)})
 
