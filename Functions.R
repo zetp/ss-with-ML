@@ -105,12 +105,12 @@ add_aa_properties <- function(df){
   df_list <- list() # make list
   
   ##old code slow
-  for (i in s){df_list[[length(df_list)+1]] <- for_column(i, df)}
+  #for (i in s){df_list[[length(df_list)+1]] <- for_column(i, df)}
   ## better - lapply
   #df_list <- lapply(s, for_column, df)
   
   # parallel lapply with progress bar
-  #df_list <- pbmclapply(s, for_column, df=df, mc.cores = no_cores)
+  df_list <- pbmclapply(s, for_column, df=df, mc.cores = no_cores)
   
   df_result <-  bind_cols(df_list) # combine all columns together
   # change 0, 1 into factors
