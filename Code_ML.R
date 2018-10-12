@@ -53,6 +53,7 @@ df$ss <-  gsub(' ', '-', df$ss)
 #  DATA SUBSETTING
 ###
 # N.B. for reproducible results set seed
+set.seed(42)
 
 # fraction_ <- as.integer(nrow(df)*0.8) # if we would like to take 80% of data
 # df_train <- sample_n(df, 10000)
@@ -72,10 +73,12 @@ df_test <- sample_n(df_no_s, 10)
 df_list <- list()
 for (i in seq(1,nrow(df_train))){
   # split sequence, then add neighbouring amino acids
-  temp_ <- split_seq(x=i, df=df) %>% add_context(., 3)
+  temp_ <- split_seq(x=i, df=df_train) %>% add_context(., 3)
   # addto list of data frames
   df_list[[length(df_list)+1]] <- temp_
 }
+
+
 
 # make one data frame from list of df's
 train <-  bind_rows(df_list) # error due to different factor levels so they will be coerced to character
